@@ -73,23 +73,23 @@
 |==============================================================================
 	.ascii "SEGA MEGA DRIVE (C)"                                | Console name
 	.ascii "FK   2018.OCT"                                      | Copyright
-	.ascii "YOUR GAME HERE                                  "	| Domestic name
-	.ascii "YOUR GAME HERE                                  "	| International name
-	.ascii "GM XXXXXXXX-XX"										| Version number
-	.word  0x0000												| Checksum
-	.ascii "J               "									| I/O support
-	.long  0x00000000											| Start address of ROM
-	.long  __end												| End address of ROM
-	.long  0x00FF0000											| Start address of RAM
-	.long  0x00FFFFFF											| End address of RAM
-	.long  0x00000000											| SRAM enabled
-	.long  0x00000000											| Unused
-	.long  0x00000000											| Start address of SRAM
-	.long  0x00000000											| End address of SRAM
-	.long  0x00000000											| Unused
-	.long  0x00000000											| Unused
-	.ascii "                                        "			| Notes (unused)
-	.ascii "JUE             "									| Country codes
+	.ascii "YOUR GAME HERE                                  "   | Domestic name
+	.ascii "YOUR GAME HERE                                  "   | International name
+	.ascii "GM XXXXXXXX-XX"                                     | Version number
+	.word  0x0000                                               | Checksum
+	.ascii "J               "                                   | I/O support
+	.long  0x00000000                                           | Start address of ROM
+	.long  __end                                                | End address of ROM
+	.long  0x00FF0000                                           | Start address of RAM
+	.long  0x00FFFFFF                                           | End address of RAM
+	.long  0x00000000                                           | SRAM enabled
+	.long  0x00000000                                           | Unused
+	.long  0x00000000                                           | Start address of SRAM
+	.long  0x00000000                                           | End address of SRAM
+	.long  0x00000000                                           | Unused
+	.long  0x00000000                                           | Unused
+	.ascii "                                        "           | Notes (unused)
+	.ascii "JUE             "                                   | Country codes
 
 |==============================================================================
 | Interrupt routines
