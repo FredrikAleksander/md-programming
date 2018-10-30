@@ -1,9 +1,10 @@
-	.include "src/memory_map.inc"
+	.section .header
 
 |==============================================================================
 | M68000 interrupt vector table
 |==============================================================================
-	.long 0x00FFE000
+InterruptVectors:
+	.long StackTop
 	.long EntryPoint
 	.long Interrupt                | Bus error
 	.long Interrupt                | Address error
@@ -71,6 +72,7 @@
 |==============================================================================
 | Sega Megadrive ROM header
 |==============================================================================
+RomHeader:
 	.ascii "SEGA MEGA DRIVE (C)"                                | Console name
 	.ascii "FK   2018.OCT"                                      | Copyright
 	.ascii "YOUR GAME HERE                                  "   | Domestic name
@@ -91,6 +93,7 @@
 	.ascii "                                        "           | Notes (unused)
 	.ascii "JUE             "                                   | Country codes
 
+	.section .text
 |==============================================================================
 | Interrupt routines
 |==============================================================================
@@ -98,50 +101,71 @@ Interrupt:
 	stop #0x2700
 	rte
 HBlankInterrupt:
-	add.l #1, (hsync_counter)
+	addi.l #1, _hsync_counter
 	rte
 VBlankInterrupt:
-	add.l #1, (vsync_counter)
+	addi.l #1, _vsync_counter
 	rte
 
 |==============================================================================
 | Boot/reset entry point
 |==============================================================================
 EntryPoint:
+	move #0x2700, %sr              | Disable interrupts
 	| Check reset button
 	tst.w 0x00A10008
-	bne Main
+	bne Startup
 	tst.w 0x00A1000C
-	bne Main
+	bne Startup
 	
 	| Write proper bits to TMSS security chip
-	move.b 0x00A10001, %d0
-	andi.b #0x0F, %d0
-	beq 1f
-	move.l #0x53454741, 0x00A14000
-
-	| Fill RAM with zeroes
-	1:
+	move.b _version_regb_a, %d0   | Move LSB of version register into D0
+	andi.b #0x0F, %d0              | Compare hardware version
+	bra Startup                    | If no TSS is present, skip next instr
+	move.l #0x53454741, _tmss_reg   | Write "SEGA" to TMSS
+Startup:
+    | Fill RAM with zeroes
 	clr.l  %d0
 	movea.l %d0, %a0
 	move.l #0x00003FFF, %d1
-	2:
+	1:
 	move.l %d0, -(%a0)
-	dbra %d1, 2b
+	dbra %d1, 1b
+
+	| Initialize .data section by copying LEN(=_edata-_sdata) bytes from _sidata to _sdata
+	| .data section is aligned on 4 byte boundaries, so it is possible to use long moves
+	move.l #_edata, %d1            | Set d1 to end of .data section
+	move.l #_sdata, %d0            | Set d0 to start of .data section
+	sub.l  %d0, %d1                | Subtract d0 from d1, making d1 equal the length of the .data section
+	cmp.l  #0, %d1                 | Check if .data section length is zero
+	beq 3f                         | If zero, skip section initialization
+	lsr.l #2, %d1                  | Divide d1 by 4
+	sub.l #1, %d1                  | Subtract 1 from d1
+	movea.l %d0, %a1               | Set a1 register to _sdata
+	movea.l #_sidata, %a0          | Set a0 register to _sidata
+	2:                             | do {
+	move.l (%a1)+, (%a0)+          |     *a1 = *a0; ++a1; ++a0;
+	dbra %d1, 2b                   | } while(d1 > 0);
 
 	| Setup Hardware
+	3:
 	jsr InitZ80
 	jsr InitPSG
 	jsr InitVDP
 	jsr InitGamepads
 
-	movea.l #ram_start, %a0        | Place address of empty RAM location to a0
+	movea.l #_sheap, %a0           | Place address of empty RAM location to a0
 	movem.l (%a0), %d0-%d7/%a1-%a6 | Clear all registers besides a0 and a7
 	move.l #0x0, %a0               | Clear a0 register
+	move   #0x2300, %sr            | Enable interrupts
 
-	                               | System should now be in a good state
-	
-	jmp Main                       | Jump to main entry point
+                                   | System should now be in a good state
+                                   | with RAM intialized to zero, all devices
+                                   | are in good initial states, and all
+                                   | registers are 0 except the SP.
+	jmp __main
+
+
 
 
 |==============================================================================
@@ -149,30 +173,30 @@ EntryPoint:
 |==============================================================================
 InitZ80:                           | Initialize the Z80 coprocessor
 
-	move.w #0x0100, z80_bus_access | Request Z80 bus access
-	move.w #0x0100, z80_reset      | Hold Z80 in reset state
+	move.w #0x0100, _z80_bus       | Request Z80 bus access
+	move.w #0x0100, _z80_reset     | Hold Z80 in reset state
 
 	1:                             | Wait for Z80 bus access
-	btst #0x0, z80_bus_access      | ...
+	btst #0x0, _z80_bus            | ...
 	bne 1b                         | ...
 
 	move.l #Z80Data, %a0           | Move location of Z80Data to a0
-	move.l #z80_ram_start, %a1     | Move location of Z80 ram to a1
+	move.l #_z80_ram, %a1          | Move location of Z80 ram to a1
 	move.l #0x29, %d0              | Move number of bytes to copy to d0
 
 	2:                             | do {
 	move.b (%a0)+, (%a1)+          |   *a1= *a0; *a1++; *a0++;
 	dbra %d0, 2b                   | } while(--d0 != -1);
 
-	move.w #0x0000, z80_reset      | Relase Z80 reset state
-	move.w #0x0000, z80_bus_access | Relinquish Z80 bus access
+	move.w #0x0000, _z80_reset     | Relase Z80 reset state
+	move.w #0x0000, _z80_bus       | Relinquish Z80 bus access
 
 	rts
 InitPSG:                           | Copy data from PSGData into PSG registers
 	move.l #PSGData, %a0
 	move.l #0x03, %d0
 	1:
-	move.b (%a0)+, psg_ctrl
+	move.b (%a0)+, _psg_ctrl
 	dbra   %d0, 1b
 	rts
 InitVDP:                           | Initialize VDP registers from VDPRegisters
@@ -181,15 +205,15 @@ InitVDP:                           | Initialize VDP registers from VDPRegisters
 	move.l #0x8000, %d1
 	1:
 	move.b (%a0)+, %d1
-	move.w %d1, vdp_ctrl
+	move.w %d1, _vdp_ctrl
 	add.w  #0x0100, %d1
 	dbra %d0, 1b
 	rts
 InitGamepads:                      | Initialize gamepads
 	move.b #0x40, %d0
-	move.b %d0, pad_ctrl_a
-	move.b %d0, pad_ctrl_b
-	move.b %d0, pad_ctrl_c
+	move.b %d0, _pad_ctrl_a
+	move.b %d0, _pad_ctrl_b
+	move.b %d0, _pad_ctrl_c
 	rts
 Z80Data:                           | I assume this is startup code?
 	.word 0xaf01, 0xd91f           | xor a; ld bc, 0x1fd9
@@ -230,7 +254,13 @@ VDPRegisters:
 	.byte 0x00                     | 21: DMA source address lo byte
 	.byte 0x00                     | 22: DMA source address mid byte
 	.byte 0x00                     | 23: DMA source address hi byte, memory-to-VRAM mode (bits 6-7)
+.section .bss
+StackBottom:
+	.space 512
+StackTop:
 
-Main:
-	jmp __main
-
+.section .data
+_hsync_counter:
+	.word 0x0000
+_vsync_counter:
+	.word 0x0000

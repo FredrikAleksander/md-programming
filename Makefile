@@ -20,10 +20,10 @@ clean:
 	rm -rf obj/
 debug: $(BIN) $(SYM)
 	$(M68K_EMULATOR) bin/rom.bin > /dev/null 2>&1 &
-	m68k-coff-gdb bin/rom.sym -ex 'target remote :1234'
+	m68k-coff-gdb bin/rom.sym -ex 'shell clear' -ex 'target remote :1234' 
 
 obj/rom.bin: $(OBJS) obj
-	$(M68K_LD) $(OBJS) -o $@
+	$(M68K_LD) $(OBJS) -T src/linker.ld -o $@
 
 $(BIN): obj/rom.bin bin
 	$(M68K_OBJCOPY) -O binary $< $@
