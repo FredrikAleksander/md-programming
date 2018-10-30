@@ -166,13 +166,10 @@ Startup:
 	jmp __main
 
 
-
-
 |==============================================================================
 | Device initialization routines
 |==============================================================================
 InitZ80:                           | Initialize the Z80 coprocessor
-
 	move.w #0x0100, _z80_bus       | Request Z80 bus access
 	move.w #0x0100, _z80_reset     | Hold Z80 in reset state
 
