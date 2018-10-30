@@ -6,7 +6,7 @@ M68K_LD?=m68k-coff-ld
 M68K_OBJCOPY?=m68k-coff-objcopy
 M68K_EMULATOR?=$(BLASTEM) -D
 
-OBJS= obj/init.S.o obj/main.S.o
+OBJS= obj/init.S.o obj/main.S.o obj/z80code.S.o
 BIN = bin/rom.bin
 SYM = bin/rom.sym
 

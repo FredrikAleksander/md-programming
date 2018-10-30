@@ -180,9 +180,11 @@ InitZ80:                           | Initialize the Z80 coprocessor
 	btst #0x0, _z80_bus            | ...
 	bne 1b                         | ...
 
-	move.l #Z80Data, %a0           | Move location of Z80Data to a0
+	move.l #_binary_z80data_end, %d0
+	move.l #_binary_z80data_start, %d1
+	sub.l  %d1, %d0                | Subtract start from end to get the length of data
+	move.l %d1, %a0                | Move location of Z80 data to a0
 	move.l #_z80_ram, %a1          | Move location of Z80 ram to a1
-	move.l #0x29, %d0              | Move number of bytes to copy to d0
 
 	2:                             | do {
 	move.b (%a0)+, (%a1)+          |   *a1= *a0; *a1++; *a0++;
@@ -215,18 +217,6 @@ InitGamepads:                      | Initialize gamepads
 	move.b %d0, _pad_ctrl_b
 	move.b %d0, _pad_ctrl_c
 	rts
-Z80Data:                           | I assume this is startup code?
-	.word 0xaf01, 0xd91f           | xor a; ld bc, 0x1fd9
-	.word 0x1127, 0x0021           | ld de, 0x0027
-	.word 0x2600, 0xf977           | ld hl, 0x0026; ld sp, hl; ld (hl), a
-	.word 0xedb0, 0xdde1           | ldir; pop ix
-	.word 0xfde1, 0xed47           | pop iy; ld i, a
-	.word 0xed4f, 0xd1e1           | ld r, a; pop de; pop hl
-	.word 0xf108, 0xd9c1           | pop af; ex af, af; exx; pop bc
-	.word 0xd1e1, 0xf1f9           | pop de; pop hl; pop af; ld sp, hl
-	.word 0xf3ed, 0x5636           | di; im 1; ld (hl), 0xe9
-	.word 0xe9e9, 0x8104           | jp (hl); add a,c; inc b
-	.word 0x8f01                   | adc a,a; ???
 PSGData:
 	.word 0x9fbf, 0xdfff
 VDPRegisters:

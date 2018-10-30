@@ -1,10 +1,7 @@
-/* TODO: Should support loading Z80 data in the same way as .data, by having a copy in ROM that gets
- * 		 copied to Z80 RAM during initialization. Same with other devices                            */
-
 MEMORY {
-	HEADER (rx) : ORIGIN = 0x00,     LENGTH = 0x200
-	ROM (rx)    : ORIGIN = 0x200,    LENGTH = 0x3ffdff
-	RAM (!rx)   : ORIGIN = 0xFF0000, LENGTH = 0xFFFF
+	HEADER (rx)  : ORIGIN = 0x00,     LENGTH = 0x200
+	ROM (rx)     : ORIGIN = 0x200,    LENGTH = 0x3ffdff
+	RAM (!rx)    : ORIGIN = 0xFF0000, LENGTH = 0xFFFF
 }
 SECTIONS {
 	.header : {
@@ -16,12 +13,11 @@ SECTIONS {
 		*(.text*);
 	} > ROM
 
-	. = ALIGN(2);
-
 	.rodata : {
+		. = ALIGN(2);
 		*(.rodata);
 		*(.rodata*);
-	}
+	} > ROM
 
 	. = ALIGN(4);
 
